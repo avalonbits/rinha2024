@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/avalonbits/rinha2024/endpoints/api"
+	"github.com/avalonbits/rinha2024/service/rinha"
 	"github.com/avalonbits/rinha2024/storage/datastore"
 	"github.com/labstack/echo/v4"
 )
@@ -17,9 +18,11 @@ func main() {
 	}
 	defer db.Close()
 
+	svc := rinha.New(db)
+	handlers := api.New(svc)
+
 	// Echo instance
 	e := echo.New()
-	handlers := api.New()
 
 	// Routes
 	e.POST("/clientes/:id/transacoes", handlers.Transact)
