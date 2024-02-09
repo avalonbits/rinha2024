@@ -6,6 +6,11 @@ package repo
 
 import ()
 
+type Limit struct {
+	Cid   int64
+	Value int64
+}
+
 type Transaction struct {
 	Cid         int64
 	Tid         string

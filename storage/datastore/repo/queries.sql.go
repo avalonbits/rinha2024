@@ -32,3 +32,47 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 	)
 	return err
 }
+
+const getBalance = `-- name: GetBalance :one
+SELECT  FLOOR(SUM(value)) AS balance FROM Transaction WHERE cid = ?
+`
+
+func (q *Queries) GetBalance(ctx context.Context, cid int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getBalance, cid)
+	var balance int64
+	err := row.Scan(&balance)
+	return balance, err
+}
+
+const transactionHistory = `-- name: TransactionHistory :many
+SELECT cid, tid, value, description, created_at FROM Transaction  WHERE cid = ? ORDER BY created_at DESC
+`
+
+func (q *Queries) TransactionHistory(ctx context.Context, cid int64) ([]Transaction, error) {
+	rows, err := q.db.QueryContext(ctx, transactionHistory, cid)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Transaction
+	for rows.Next() {
+		var i Transaction
+		if err := rows.Scan(
+			&i.Cid,
+			&i.Tid,
+			&i.Value,
+			&i.Description,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
