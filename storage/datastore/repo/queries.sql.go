@@ -7,6 +7,7 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 )
 
 const createTransaction = `-- name: CreateTransaction :exec
@@ -34,12 +35,12 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const getBalance = `-- name: GetBalance :one
-SELECT  FLOOR(SUM(value)) AS balance FROM Transactions WHERE cid = ?
+SELECT  SUM(value) AS balance FROM Transactions WHERE cid = ?
 `
 
-func (q *Queries) GetBalance(ctx context.Context, cid int64) (int64, error) {
+func (q *Queries) GetBalance(ctx context.Context, cid int64) (sql.NullFloat64, error) {
 	row := q.db.QueryRowContext(ctx, getBalance, cid)
-	var balance int64
+	var balance sql.NullFloat64
 	err := row.Scan(&balance)
 	return balance, err
 }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -62,7 +63,13 @@ func (h *Handler) Transact(c echo.Context) error {
 
 	res, err := h.svc.Transact(c.Request().Context(), int64(cid), r.Value, r.Description)
 	if err != nil {
-		return err
+		if errors.Is(err, rinha.OverLimitErr) {
+			return httpError(http.StatusUnprocessableEntity, err.Error())
+		}
+		if errors.Is(err, rinha.NotFoundErr) {
+			return httpError(http.StatusNotFound, err.Error())
+		}
+		return httpError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, res)

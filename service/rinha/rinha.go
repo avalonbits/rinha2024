@@ -23,7 +23,7 @@ func New(db *datastore.DB) *Service {
 }
 
 var (
-	NotFloundErr = fmt.Errorf("not found")
+	NotFoundErr  = fmt.Errorf("not found")
 	OverLimitErr = fmt.Errorf("over limit")
 )
 
@@ -43,17 +43,18 @@ func (s *Service) Transact(
 		limit, err := tx.GetLimit(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
-				return NotFloundErr
+				return NotFoundErr
 			}
 			return err
 		}
 
-		balance, err := tx.GetBalance(ctx, cid)
+		bf64, err := tx.GetBalance(ctx, cid)
 		if err != nil {
 			return err
 		}
+		balance := int64(bf64.Float64) + value
 
-		if limit-(balance+value) < 0 {
+		if limit+balance < 0 {
 			return OverLimitErr
 		}
 
@@ -63,8 +64,11 @@ func (s *Service) Transact(
 			Tid:         tid,
 			Value:       value,
 			Description: description,
-			CreatedAt:   now.Format(time.RFC3339),
+			CreatedAt:   now.Format(time.RFC3339Nano),
 		})
+
+		r.Limit = limit
+		r.Balance = balance
 		return nil
 	})
 }
