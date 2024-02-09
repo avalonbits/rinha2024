@@ -44,6 +44,17 @@ func (q *Queries) GetBalance(ctx context.Context, cid int64) (int64, error) {
 	return balance, err
 }
 
+const getLimit = `-- name: GetLimit :one
+SELECT value FROM Limit WHERE cid = ? LIMIT 1
+`
+
+func (q *Queries) GetLimit(ctx context.Context, cid int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getLimit, cid)
+	var value int64
+	err := row.Scan(&value)
+	return value, err
+}
+
 const transactionHistory = `-- name: TransactionHistory :many
 SELECT cid, tid, value, description, created_at FROM Transaction  WHERE cid = ? ORDER BY created_at DESC
 `

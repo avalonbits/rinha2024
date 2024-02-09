@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS Transaction(
     FOREIGN KEY(cid) REFERENCES Limit(cid) ON DELETE CASCADE
 );
 
+INSERT INTO Limit (cid, value)
+       VALUES (1, 100000), (2, 80000), (3, 1000000), (4, 10000000), (5, 500000);
 -- +goose StatementEnd
 
 -- +goose Down
