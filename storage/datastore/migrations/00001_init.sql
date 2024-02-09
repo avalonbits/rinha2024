@@ -1,5 +1,12 @@
 -- +goose Up
 -- +goose StatementBegin
+
+CREATE TABLE IF NOT EXISTS Limit(
+    cid         INTEGER NOT NULL PRIMARY KEY,
+    value       INTEGER NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS Transaction(
     cid         INTEGER NOT NULL,
     tid         TEXT NOT NULL,
@@ -7,12 +14,8 @@ CREATE TABLE IF NOT EXISTS Transaction(
     description TEXT NOT NULL,
     created_at  INTEGER NOT NULL,
 
-    PRIMARY KEY(cid, tid)
-);
-
-CREATE TABLE IF NOT EXISTS Limit(
-    cid         INTEGER NOT NULL PRIMARY KEY,
-    value       INTEGER NOT NULL
+    PRIMARY KEY(cid, tid),
+    FOREIGN KEY(cid) REFERENCES Limit(cid) ON DELETE CASCADE
 );
 
 -- +goose StatementEnd
@@ -20,4 +23,5 @@ CREATE TABLE IF NOT EXISTS Limit(
 -- +goose Down
 -- +goose StatementBegin
 DROP TABLE IF EXISTS Transaction;
+dROP TABLE IF EXISTS Limit;
 -- +goose StatementEnd
