@@ -62,7 +62,6 @@ func (_ easyJsonSerializer) Serialize(c echo.Context, data any, indent string) e
 }
 
 func (_ easyJsonSerializer) Deserialize(c echo.Context, data any) error {
-
 	js, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())

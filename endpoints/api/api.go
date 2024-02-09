@@ -57,7 +57,7 @@ func (h *Handler) Transact(c echo.Context) error {
 	}
 	cid, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return httpError(http.StatusBadRequest, "invalid id")
+		return httpError(http.StatusBadRequest, "id inválido")
 	}
 
 	res, err := h.svc.Transact(c.Request().Context(), int64(cid), r.Value, r.Description)
@@ -69,7 +69,17 @@ func (h *Handler) Transact(c echo.Context) error {
 }
 
 func (h *Handler) AccountHistory(c echo.Context) error {
-	return httpError(http.StatusInternalServerError, "Unimplemented")
+	cid, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return httpError(http.StatusBadRequest, "id inválido")
+	}
+
+	res, err := h.svc.AccountHistory(c.Request().Context(), int64(cid))
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 func httpError(status int, msg string) *echo.HTTPError {
 	return echo.NewHTTPError(status, msg)
