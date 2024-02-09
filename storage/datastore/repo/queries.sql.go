@@ -10,7 +10,7 @@ import (
 )
 
 const createTransaction = `-- name: CreateTransaction :exec
-INSERT INTO Transaction (cid, tid, value, description, created_at)
+INSERT INTO Transactions (cid, tid, value, description, created_at)
        VALUES (?, ?, ?, ?, ?)
 `
 
@@ -34,7 +34,7 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 }
 
 const getBalance = `-- name: GetBalance :one
-SELECT  FLOOR(SUM(value)) AS balance FROM Transaction WHERE cid = ?
+SELECT  FLOOR(SUM(value)) AS balance FROM Transactions WHERE cid = ?
 `
 
 func (q *Queries) GetBalance(ctx context.Context, cid int64) (int64, error) {
@@ -45,7 +45,7 @@ func (q *Queries) GetBalance(ctx context.Context, cid int64) (int64, error) {
 }
 
 const getLimit = `-- name: GetLimit :one
-SELECT value FROM Limit WHERE cid = ? LIMIT 1
+SELECT value FROM Limits WHERE cid = ? LIMIT 1
 `
 
 func (q *Queries) GetLimit(ctx context.Context, cid int64) (int64, error) {
@@ -56,7 +56,7 @@ func (q *Queries) GetLimit(ctx context.Context, cid int64) (int64, error) {
 }
 
 const transactionHistory = `-- name: TransactionHistory :many
-SELECT cid, tid, value, description, created_at FROM Transaction  WHERE cid = ? ORDER BY created_at DESC
+SELECT cid, tid, value, description, created_at FROM Transactions  WHERE cid = ? ORDER BY created_at DESC
 `
 
 func (q *Queries) TransactionHistory(ctx context.Context, cid int64) ([]Transaction, error) {
