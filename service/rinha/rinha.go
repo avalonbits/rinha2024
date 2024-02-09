@@ -95,7 +95,53 @@ type AccountHistoryResponse struct {
 }
 
 func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistoryResponse, error) {
-	r := AccountHistoryResponse{}
+	r := &AccountHistoryResponse{}
+	now := time.Now().UTC()
 
-	return r, nil
+	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
+		limit, err := tx.GetLimit(ctx, cid)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return NotFoundErr
+			}
+			return err
+		}
+
+		bf64, err := tx.GetBalance(ctx, cid)
+		if err != nil {
+			return err
+		}
+		bal := int64(bf64.Float64)
+
+		*r = AccountHistoryResponse{
+			Balance: balance{
+				Limit: limit,
+				Total: bal,
+				When:  now.Format(time.RFC3339Nano),
+			},
+		}
+
+		history, err := tx.TransactionHistory(ctx, cid)
+		if err != nil {
+			return err
+		}
+		r.Transactions = make([]transaction, 0, 0)
+
+		for _, h := range history {
+			tType := "c"
+			if h.Value < 0 {
+				tType = "d"
+				h.Value = -h.Value
+			}
+			r.Transactions = append(r.Transactions, transaction{
+				Value:       h.Value,
+				Type:        tType,
+				Description: h.Description,
+				When:        h.CreatedAt,
+			})
+		}
+
+		return nil
+
+	})
 }

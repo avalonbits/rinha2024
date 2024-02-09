@@ -57,7 +57,7 @@ func (q *Queries) GetLimit(ctx context.Context, cid int64) (int64, error) {
 }
 
 const transactionHistory = `-- name: TransactionHistory :many
-SELECT cid, tid, value, description, created_at FROM Transactions  WHERE cid = ? ORDER BY created_at DESC
+SELECT cid, tid, value, description, created_at FROM Transactions  WHERE cid = ? ORDER BY created_at DESC LIMIT 10
 `
 
 func (q *Queries) TransactionHistory(ctx context.Context, cid int64) ([]Transaction, error) {

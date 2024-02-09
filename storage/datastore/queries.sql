@@ -9,4 +9,4 @@ SELECT  SUM(value) AS balance FROM Transactions WHERE cid = ?;
 SELECT value FROM Limits WHERE cid = ? LIMIT 1;
 
 -- name: TransactionHistory :many
-SELECT * FROM Transactions  WHERE cid = ? ORDER BY created_at DESC;
+SELECT * FROM Transactions  WHERE cid = ? ORDER BY created_at DESC LIMIT 10;

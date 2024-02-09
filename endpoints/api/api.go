@@ -47,6 +47,9 @@ func (r *transactRequest) validate(c echo.Context) error {
 	if r.Description == "" {
 		return fmt.Errorf("descricao não definida")
 	}
+	if len(r.Description) > 10 {
+		return fmt.Errorf("descricao muito longa")
+	}
 
 	return nil
 }
@@ -83,11 +86,15 @@ func (h *Handler) AccountHistory(c echo.Context) error {
 
 	res, err := h.svc.AccountHistory(c.Request().Context(), int64(cid))
 	if err != nil {
-		return err
+		if errors.Is(err, rinha.NotFoundErr) {
+			return httpError(http.StatusNotFound, err.Error())
+		}
+		return httpError(http.StatusNotFound, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, res)
 }
+
 func httpError(status int, msg string) *echo.HTTPError {
 	return echo.NewHTTPError(status, msg)
 }

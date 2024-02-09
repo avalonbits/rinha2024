@@ -31,7 +31,7 @@ func main() {
 
 	// Routes
 	e.POST("/clientes/:id/transacoes", handlers.Transact)
-	e.GET("/clients/:id/extrato", handlers.AccountHistory)
+	e.GET("/clientes/:id/extrato", handlers.AccountHistory)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))
