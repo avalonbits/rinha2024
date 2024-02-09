@@ -19,7 +19,7 @@ type CreateTransactionParams struct {
 	Tid         string
 	Value       int64
 	Description string
-	CreatedAt   int64
+	CreatedAt   string
 }
 
 func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) error {

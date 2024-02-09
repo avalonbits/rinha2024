@@ -3,10 +3,10 @@ module github.com/avalonbits/rinha2024
 go 1.21.5
 
 require (
-	github.com/avalonbits/shareboard v0.0.0-20240125163842-cc627a865af5
 	github.com/labstack/echo/v4 v4.11.4
 	github.com/mailru/easyjson v0.7.7
 	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/pressly/goose/v3 v3.18.0
 )
 

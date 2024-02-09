@@ -2,8 +2,14 @@ package rinha
 
 import (
 	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
 
 	"github.com/avalonbits/rinha2024/storage/datastore"
+	"github.com/avalonbits/rinha2024/storage/datastore/repo"
+	"github.com/oklog/ulid/v2"
 )
 
 type Service struct {
@@ -16,6 +22,11 @@ func New(db *datastore.DB) *Service {
 	}
 }
 
+var (
+	NotFloundErr = fmt.Errorf("not found")
+	OverLimitErr = fmt.Errorf("over limit")
+)
+
 //easyjson:json
 type TransactResponse struct {
 	Limit   int64 `json:"limite"`
@@ -25,9 +36,37 @@ type TransactResponse struct {
 func (s *Service) Transact(
 	ctx context.Context, cid, value int64, description string,
 ) (TransactResponse, error) {
-	r := TransactResponse{}
+	r := &TransactResponse{}
+	now := time.Now().UTC()
 
-	return r, nil
+	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
+		limit, err := tx.GetLimit(ctx, cid)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return NotFloundErr
+			}
+			return err
+		}
+
+		balance, err := tx.GetBalance(ctx, cid)
+		if err != nil {
+			return err
+		}
+
+		if limit-(balance+value) < 0 {
+			return OverLimitErr
+		}
+
+		tid := ulid.Make().String()
+		err = tx.CreateTransaction(ctx, repo.CreateTransactionParams{
+			Cid:         cid,
+			Tid:         tid,
+			Value:       value,
+			Description: description,
+			CreatedAt:   now.Format(time.RFC3339),
+		})
+		return nil
+	})
 }
 
 //easyjson:json
