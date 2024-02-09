@@ -1,7 +1,10 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/avalonbits/rinha2024/service/rinha"
 	"github.com/labstack/echo/v4"
@@ -17,8 +20,52 @@ func New(svc *rinha.Service) *Handler {
 	}
 }
 
+//easyjson:json
+type transactRequest struct {
+	Value       int64  `json:"valor"`
+	Type        string `json:"tipo"`
+	Description string `json:"descricao"`
+}
+
+func (r *transactRequest) validate(c echo.Context) error {
+	if r.Value <= 0 {
+		return fmt.Errorf("valor tem que ser positivo")
+	}
+
+	r.Type = strings.TrimSpace(r.Type)
+	if r.Type == "" {
+		return fmt.Errorf("tipo não definido")
+	}
+	if r.Type == "d" || r.Type == "D" {
+		r.Value = -r.Value
+	} else if r.Type != "c" && r.Type != "C" {
+		return fmt.Errorf("tipo deve ser 'c' ou 'd'")
+	}
+
+	r.Description = strings.TrimSpace(r.Description)
+	if r.Description == "" {
+		return fmt.Errorf("descricao não definida")
+	}
+
+	return nil
+}
+
 func (h *Handler) Transact(c echo.Context) error {
-	return httpError(http.StatusInternalServerError, "Unimplemented")
+	r := &transactRequest{}
+	if err := h.validateRequest(c, r); err != nil {
+		return err
+	}
+	cid, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return httpError(http.StatusBadRequest, "invalid id")
+	}
+
+	res, err := h.svc.Transact(c.Request().Context(), int64(cid), r.Value, r.Description)
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, res)
 }
 
 func (h *Handler) AccountHistory(c echo.Context) error {
@@ -26,4 +73,20 @@ func (h *Handler) AccountHistory(c echo.Context) error {
 }
 func httpError(status int, msg string) *echo.HTTPError {
 	return echo.NewHTTPError(status, msg)
+}
+
+type validator interface {
+	validate(echo.Context) error
+}
+
+func (h *Handler) validateRequest(c echo.Context, req validator) error {
+	var err error
+	if err = c.Bind(req); err == nil {
+		err = req.validate(c)
+	}
+
+	if err != nil {
+		return httpError(http.StatusBadRequest, err.Error())
+	}
+	return nil
 }
