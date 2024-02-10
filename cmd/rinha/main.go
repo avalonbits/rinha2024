@@ -8,10 +8,13 @@ import (
 	"net/http"
 	"os"
 
+	_ "net/http/pprof"
+
 	"github.com/avalonbits/rinha2024/endpoints/api"
 	"github.com/avalonbits/rinha2024/service/rinha"
 	"github.com/avalonbits/rinha2024/storage/datastore"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/mailru/easyjson"
 )
 
@@ -31,7 +34,12 @@ func main() {
 
 	// Routes
 	e.POST("/clientes/:id/transacoes", handlers.Transact)
-	e.GET("/clientes/:id/extrato", handlers.AccountHistory)
+	e.GET("/clientes/:id/extrato", handlers.AccountHistory, middleware.Gzip())
+
+	// Start pprof server
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	// Start server
 	e.Logger.Fatal(e.Start(":1323"))

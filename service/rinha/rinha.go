@@ -2,9 +2,11 @@ package rinha
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"time"
 
 	"github.com/avalonbits/rinha2024/storage/datastore"
@@ -39,6 +41,10 @@ func (s *Service) Transact(
 	r := &TransactResponse{}
 	now := time.Now().UTC()
 
+	// While we don't guarantee that the tid will be used, it is better to create
+	// it outside the transaction to reduce the time the transaction takes.
+	tid := txID(now)
+
 	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
 		limit, err := tx.GetLimit(ctx, cid)
 		if err != nil {
@@ -58,7 +64,6 @@ func (s *Service) Transact(
 			return OverLimitErr
 		}
 
-		tid := ulid.Make().String()
 		err = tx.CreateTransaction(ctx, repo.CreateTransactionParams{
 			Cid:         cid,
 			Tid:         tid,
@@ -144,4 +149,9 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 		return nil
 
 	})
+}
+
+func txID(now time.Time) string {
+	entropy := ulid.Monotonic(rand.Reader, math.MaxUint64)
+	return ulid.MustNew(uint64(now.UnixMilli()), entropy).String()
 }

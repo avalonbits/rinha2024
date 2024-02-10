@@ -1,6 +1,5 @@
 -- +goose Up
 -- +goose StatementBegin
-
 CREATE TABLE IF NOT EXISTS Limits(
     cid         INTEGER NOT NULL PRIMARY KEY,
     value       INTEGER NOT NULL
@@ -23,6 +22,6 @@ INSERT INTO Limits (cid, value)
 
 -- +goose Down
 -- +goose StatementBegin
-DROP TABLE IF EXISTS Transaction;
-dROP TABLE IF EXISTS Limits;
+DROP TABLE IF EXISTS Transactions;
+DROP TABLE IF EXISTS Limits;
 -- +goose StatementEnd
