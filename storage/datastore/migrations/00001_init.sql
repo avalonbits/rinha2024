@@ -10,7 +10,6 @@ CREATE TABLE IF NOT EXISTS Transactions(
     tid         TEXT NOT NULL,
     value       INTEGER NOT NULL,
     description TEXT NOT NULL,
-    created_at  TEXT NOT NULL,
 
     PRIMARY KEY(cid, tid),
     FOREIGN KEY(cid) REFERENCES Limits(cid) ON DELETE CASCADE

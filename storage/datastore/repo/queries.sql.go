@@ -11,8 +11,8 @@ import (
 )
 
 const createTransaction = `-- name: CreateTransaction :exec
-INSERT INTO Transactions (cid, tid, value, description, created_at)
-       VALUES (?, ?, ?, ?, ?)
+INSERT INTO Transactions (cid, tid, value, description)
+       VALUES (?, ?, ?, ?)
 `
 
 type CreateTransactionParams struct {
@@ -20,7 +20,6 @@ type CreateTransactionParams struct {
 	Tid         string
 	Value       int64
 	Description string
-	CreatedAt   string
 }
 
 func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionParams) error {
@@ -29,53 +28,48 @@ func (q *Queries) CreateTransaction(ctx context.Context, arg CreateTransactionPa
 		arg.Tid,
 		arg.Value,
 		arg.Description,
-		arg.CreatedAt,
 	)
 	return err
 }
 
 const getBalance = `-- name: GetBalance :one
-SELECT  SUM(value) AS balance FROM Transactions WHERE cid = ?
+SELECT  L.Value value,
+        (SELECT SUM(value) FROM Transactions T WHERE T.cid = L.cid) balance
+FROM Limits L WHERE L.cid = ?
 `
 
-func (q *Queries) GetBalance(ctx context.Context, cid int64) (sql.NullFloat64, error) {
-	row := q.db.QueryRowContext(ctx, getBalance, cid)
-	var balance sql.NullFloat64
-	err := row.Scan(&balance)
-	return balance, err
+type GetBalanceRow struct {
+	Value   int64
+	Balance sql.NullFloat64
 }
 
-const getLimit = `-- name: GetLimit :one
-SELECT value FROM Limits WHERE cid = ? LIMIT 1
-`
-
-func (q *Queries) GetLimit(ctx context.Context, cid int64) (int64, error) {
-	row := q.db.QueryRowContext(ctx, getLimit, cid)
-	var value int64
-	err := row.Scan(&value)
-	return value, err
+func (q *Queries) GetBalance(ctx context.Context, cid int64) (GetBalanceRow, error) {
+	row := q.db.QueryRowContext(ctx, getBalance, cid)
+	var i GetBalanceRow
+	err := row.Scan(&i.Value, &i.Balance)
+	return i, err
 }
 
 const transactionHistory = `-- name: TransactionHistory :many
-SELECT cid, tid, value, description, created_at FROM Transactions  WHERE cid = ? ORDER BY created_at DESC LIMIT 10
+SELECT tid, value, description FROM Transactions  WHERE cid = ? ORDER BY tid DESC LIMIT 10
 `
 
-func (q *Queries) TransactionHistory(ctx context.Context, cid int64) ([]Transaction, error) {
+type TransactionHistoryRow struct {
+	Tid         string
+	Value       int64
+	Description string
+}
+
+func (q *Queries) TransactionHistory(ctx context.Context, cid int64) ([]TransactionHistoryRow, error) {
 	rows, err := q.db.QueryContext(ctx, transactionHistory, cid)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Transaction
+	var items []TransactionHistoryRow
 	for rows.Next() {
-		var i Transaction
-		if err := rows.Scan(
-			&i.Cid,
-			&i.Tid,
-			&i.Value,
-			&i.Description,
-			&i.CreatedAt,
-		); err != nil {
+		var i TransactionHistoryRow
+		if err := rows.Scan(&i.Tid, &i.Value, &i.Description); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

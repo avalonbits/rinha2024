@@ -1,12 +1,11 @@
 -- name: CreateTransaction :exec
-INSERT INTO Transactions (cid, tid, value, description, created_at)
-       VALUES (?, ?, ?, ?, ?);
+INSERT INTO Transactions (cid, tid, value, description)
+       VALUES (?, ?, ?, ?);
 
 -- name: GetBalance :one
-SELECT  SUM(value) AS balance FROM Transactions WHERE cid = ?;
-
--- name: GetLimit :one
-SELECT value FROM Limits WHERE cid = ? LIMIT 1;
+SELECT  L.Value value,
+        (SELECT SUM(value) FROM Transactions T WHERE T.cid = L.cid) balance
+FROM Limits L WHERE L.cid = ?;
 
 -- name: TransactionHistory :many
-SELECT * FROM Transactions  WHERE cid = ? ORDER BY created_at DESC LIMIT 10;
+SELECT tid, value, description FROM Transactions  WHERE cid = ? ORDER BY tid DESC LIMIT 10;

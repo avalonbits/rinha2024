@@ -57,11 +57,11 @@ func (r *transactRequest) validate(c echo.Context) error {
 func (h *Handler) Transact(c echo.Context) error {
 	r := &transactRequest{}
 	if err := h.validateRequest(c, r); err != nil {
-		return err
+		return httpError(http.StatusUnprocessableEntity, err.Error())
 	}
 	cid, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		return httpError(http.StatusBadRequest, "id inválido")
+		return httpError(http.StatusUnprocessableEntity, "id inválido")
 	}
 
 	res, err := h.svc.Transact(c.Request().Context(), int64(cid), r.Value, r.Description)

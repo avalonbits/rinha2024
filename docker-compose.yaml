@@ -10,20 +10,21 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.50'
-          memory: '175MB'
+          cpus: '0.65'
+          memory: '12GB'
     networks:
       - app-network
     volumes:
       - sqlitedb:/tmp
-
+    restart: always
   api2:
     <<: *api
     hostname: api2
     container_name: rinhaapi2
     volumes:
       - sqlitedb:/tmp
-
+    ports:
+      - "6060:5000"
   envoy:
     image: envoyproxy/envoy:v1.29-latest
     container_name: rinhaproxy
@@ -36,10 +37,11 @@ services:
       - "9999:9999"
     networks:
       - app-network
+    restart: always
     deploy:
       resources:
         limits:
-          cpus: '0.50'
+          cpus: '0.2'
           memory: '200MB'
 
 networks:

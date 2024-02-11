@@ -9,6 +9,7 @@ FROM alpine:latest
 RUN apk update && apk add --no-cache libc6-compat
 
 EXPOSE 1323
+EXPOSE 6060
 
 COPY --from=builder /app/rinha ./rinha
 COPY --from=builder /app/.env ./.env

@@ -16,5 +16,4 @@ type Transaction struct {
 	Tid         string
 	Value       int64
 	Description string
-	CreatedAt   string
 }

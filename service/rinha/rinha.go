@@ -46,21 +46,16 @@ func (s *Service) Transact(
 	tid := txID(now)
 
 	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
-		limit, err := tx.GetLimit(ctx, cid)
+		row, err := tx.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return NotFoundErr
 			}
 			return err
 		}
+		balance := int64(row.Balance.Float64) + value
 
-		bf64, err := tx.GetBalance(ctx, cid)
-		if err != nil {
-			return err
-		}
-		balance := int64(bf64.Float64) + value
-
-		if limit+balance < 0 {
+		if row.Value+balance < 0 {
 			return OverLimitErr
 		}
 
@@ -69,10 +64,9 @@ func (s *Service) Transact(
 			Tid:         tid,
 			Value:       value,
 			Description: description,
-			CreatedAt:   now.Format(time.RFC3339Nano),
 		})
 
-		r.Limit = limit
+		r.Limit = row.Value
 		r.Balance = balance
 		return nil
 	})
@@ -103,52 +97,45 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 	r := &AccountHistoryResponse{}
 	now := time.Now().UTC()
 
-	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
-		limit, err := tx.GetLimit(ctx, cid)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return NotFoundErr
-			}
-			return err
+	row, err := s.db.GetBalance(ctx, cid)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return *r, NotFoundErr
 		}
+		return *r, err
+	}
+	bal := int64(row.Balance.Float64)
 
-		bf64, err := tx.GetBalance(ctx, cid)
-		if err != nil {
-			return err
+	*r = AccountHistoryResponse{
+		Balance: balance{
+			Limit: row.Value,
+			Total: bal,
+			When:  now.Format(time.RFC3339Nano),
+		},
+	}
+
+	history, err := s.db.TransactionHistory(ctx, cid)
+	if err != nil {
+		return *r, err
+	}
+	r.Transactions = make([]transaction, 0, 0)
+
+	for _, h := range history {
+		tType := "c"
+		if h.Value < 0 {
+			tType = "d"
+			h.Value = -h.Value
 		}
-		bal := int64(bf64.Float64)
+		id, _ := ulid.Parse(h.Tid)
+		r.Transactions = append(r.Transactions, transaction{
+			Value:       h.Value,
+			Type:        tType,
+			Description: h.Description,
+			When:        time.UnixMilli(int64(id.Time())).Format(time.RFC3339Nano),
+		})
+	}
 
-		*r = AccountHistoryResponse{
-			Balance: balance{
-				Limit: limit,
-				Total: bal,
-				When:  now.Format(time.RFC3339Nano),
-			},
-		}
-
-		history, err := tx.TransactionHistory(ctx, cid)
-		if err != nil {
-			return err
-		}
-		r.Transactions = make([]transaction, 0, 0)
-
-		for _, h := range history {
-			tType := "c"
-			if h.Value < 0 {
-				tType = "d"
-				h.Value = -h.Value
-			}
-			r.Transactions = append(r.Transactions, transaction{
-				Value:       h.Value,
-				Type:        tType,
-				Description: h.Description,
-				When:        h.CreatedAt,
-			})
-		}
-
-		return nil
-
-	})
+	return *r, nil
 }
 
 func txID(now time.Time) string {
