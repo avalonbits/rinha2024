@@ -15,12 +15,14 @@ import (
 )
 
 type Service struct {
-	db *datastore.DB
+	rddb *datastore.DB
+	wrdb *datastore.DB
 }
 
-func New(db *datastore.DB) *Service {
+func New(rddb *datastore.DB, wrdb *datastore.DB) *Service {
 	return &Service{
-		db: db,
+		rddb: rddb,
+		wrdb: wrdb,
 	}
 }
 
@@ -38,14 +40,17 @@ type TransactResponse struct {
 func (s *Service) Transact(
 	ctx context.Context, cid, value int64, description string,
 ) (TransactResponse, error) {
-	r := &TransactResponse{}
+	r := &TransactResponse{
+		Limit:   0,
+		Balance: 0,
+	}
 	now := time.Now().UTC()
 
 	// While we don't guarantee that the tid will be used, it is better to create
 	// it outside the transaction to reduce the time the transaction takes.
 	tid := txID(now)
 
-	return *r, s.db.Transaction(ctx, func(tx *datastore.DB) error {
+	return *r, s.wrdb.Transaction(ctx, func(tx *datastore.DB) error {
 		row, err := tx.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -65,6 +70,10 @@ func (s *Service) Transact(
 			Value:       value,
 			Description: description,
 		})
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 
 		r.Limit = row.Value
 		r.Balance = balance
@@ -99,7 +108,7 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 
 	var history []repo.TransactionHistoryRow
 
-	err := s.db.Transaction(ctx, func(tx *datastore.DB) error {
+	err := s.rddb.Transaction(ctx, func(tx *datastore.DB) error {
 		row, err := tx.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

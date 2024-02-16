@@ -16,7 +16,7 @@ import (
 //go:embed migrations/*
 var migrations embed.FS
 
-func GetDB(dbURL string) (*DB, error) {
+func GetWriteDB(dbURL string) (*DB, error) {
 	db, err := sql.Open("sqlite3", dbURL)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,16 @@ func GetDB(dbURL string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	db.SetMaxOpenConns(1)
+	return &DB{Queries: repo.New(db), rdbms: db}, nil
+}
+
+func GetReadDB(dbURL string) (*DB, error) {
+	db, err := sql.Open("sqlite3", dbURL)
+	if err != nil {
+		return nil, err
+	}
 
 	return &DB{Queries: repo.New(db), rdbms: db}, nil
 }
