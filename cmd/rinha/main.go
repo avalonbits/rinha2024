@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime/trace"
+	"strconv"
 
 	_ "net/http/pprof"
 
@@ -24,6 +25,7 @@ import (
 
 var (
 	traceF = flag.Bool("trace", false, "If true, writes tracing data for the server.")
+	port   = flag.Int("port", 1323, "Sets the port to use for the server.")
 )
 
 func main() {
@@ -63,9 +65,10 @@ func main() {
 		defer trace.Stop()
 	}
 
+	// Start server
+
 	go func() {
-		// Start server
-		e.Logger.Info(e.Start(":9999"))
+		e.Logger.Info(e.Start(":" + strconv.Itoa(*port)))
 	}()
 
 	c := make(chan os.Signal, 1)
