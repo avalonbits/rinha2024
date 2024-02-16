@@ -97,29 +97,38 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 	r := &AccountHistoryResponse{}
 	now := time.Now().UTC()
 
-	row, err := s.db.GetBalance(ctx, cid)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return *r, NotFoundErr
+	var history []repo.TransactionHistoryRow
+
+	err := s.db.Transaction(ctx, func(tx *datastore.DB) error {
+		row, err := tx.GetBalance(ctx, cid)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return NotFoundErr
+			}
+			return err
 		}
-		return *r, err
-	}
-	bal := int64(row.Balance.Float64)
+		bal := int64(row.Balance.Float64)
 
-	*r = AccountHistoryResponse{
-		Balance: balance{
-			Limit: row.Value,
-			Total: bal,
-			When:  now.Format(time.RFC3339Nano),
-		},
-	}
+		*r = AccountHistoryResponse{
+			Balance: balance{
+				Limit: row.Value,
+				Total: bal,
+				When:  now.Format(time.RFC3339Nano),
+			},
+		}
 
-	history, err := s.db.TransactionHistory(ctx, cid)
+		history, err = tx.TransactionHistory(ctx, cid)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	if err != nil {
 		return *r, err
 	}
-	r.Transactions = make([]transaction, 0, 0)
 
+	r.Transactions = make([]transaction, 0, len(history))
 	for _, h := range history {
 		tType := "c"
 		if h.Value < 0 {
