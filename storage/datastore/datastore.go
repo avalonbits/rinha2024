@@ -49,6 +49,7 @@ func GetReadDB(dbURL string) (*DB, error) {
 		return nil, err
 	}
 
+	db.SetMaxOpenConns(1)
 	return &DB{Queries: repo.New(db), rdbms: db}, nil
 }
 
