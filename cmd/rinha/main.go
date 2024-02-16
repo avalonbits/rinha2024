@@ -2,11 +2,15 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"flag"
 	"io"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime/trace"
 
 	_ "net/http/pprof"
 
@@ -18,7 +22,12 @@ import (
 	"github.com/mailru/easyjson"
 )
 
+var (
+	traceF = flag.Bool("trace", false, "If true, writes tracing data for the server.")
+)
+
 func main() {
+	flag.Parse()
 	db, err := datastore.GetDB(os.Getenv("DATABASE_DSN"))
 	if err != nil {
 		log.Fatal(err)
@@ -41,8 +50,28 @@ func main() {
 		log.Println(http.ListenAndServe("localhost:6060", nil))
 	}()
 
-	// Start server
-	e.Logger.Fatal(e.Start(":9999"))
+	if *traceF {
+		traceFile, err := os.Create("/tmp/trace.out")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer traceFile.Close()
+
+		if err := trace.Start(traceFile); err != nil {
+			log.Fatal(err)
+		}
+		defer trace.Stop()
+	}
+
+	go func() {
+		// Start server
+		e.Logger.Info(e.Start(":9999"))
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	<-c
+	e.Shutdown(context.Background())
 }
 
 type easyJsonSerializer struct {

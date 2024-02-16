@@ -1,2 +1,2 @@
 #!/bin/bash
-export $(cat .env | xargs) && ./tmp/rinha
+export $(cat .env | xargs) && ./tmp/rinha -trace
