@@ -32,6 +32,13 @@ func GetDB(dbURL string) (*DB, error) {
 		db.Close()
 		return nil, err
 	}
+	db.Close()
+
+	db, err = sql.Open("sqlite3", dbURL)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(1)
 
 	return &DB{Queries: repo.New(db), rdbms: db}, nil
 }
