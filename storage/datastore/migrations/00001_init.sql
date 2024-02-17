@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-PRAGMA busy_timeout = 5;
+PRAGMA busy_timeout = 1;
 
 CREATE TABLE IF NOT EXISTS Limits(
     cid         INTEGER NOT NULL PRIMARY KEY,

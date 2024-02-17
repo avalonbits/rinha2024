@@ -49,7 +49,7 @@ func (s *Service) Transact(
 	// While we don't guarantee that the tid will be used, it is better to create
 	// it outside the transaction to reduce the time the transaction takes.
 	tid := txID(now)
-
+	var balance int64
 	return *r, s.wrdb.Transaction(ctx, func(tx *datastore.DB) error {
 		row, err := tx.GetBalance(ctx, cid)
 		if err != nil {
@@ -58,7 +58,7 @@ func (s *Service) Transact(
 			}
 			return err
 		}
-		balance := int64(row.Balance.Float64) + value
+		balance = int64(row.Balance.Float64) + value
 
 		if row.Value+balance < 0 {
 			return OverLimitErr
@@ -103,10 +103,11 @@ type AccountHistoryResponse struct {
 }
 
 func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistoryResponse, error) {
-	r := &AccountHistoryResponse{}
 	now := time.Now().UTC()
 
 	var history []repo.TransactionHistoryRow
+	var bal int64
+	var limit int64
 
 	err := s.rddb.Transaction(ctx, func(tx *datastore.DB) error {
 		row, err := tx.GetBalance(ctx, cid)
@@ -116,15 +117,8 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 			}
 			return err
 		}
-		bal := int64(row.Balance.Float64)
-
-		*r = AccountHistoryResponse{
-			Balance: balance{
-				Limit: row.Value,
-				Total: bal,
-				When:  now.Format(time.RFC3339Nano),
-			},
-		}
+		bal = int64(row.Balance.Float64)
+		limit = row.Value
 
 		history, err = tx.TransactionHistory(ctx, cid)
 		if err != nil {
@@ -134,7 +128,15 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 	})
 
 	if err != nil {
-		return *r, err
+		return AccountHistoryResponse{}, err
+	}
+
+	r := AccountHistoryResponse{
+		Balance: balance{
+			Limit: limit,
+			Total: bal,
+			When:  now.Format(time.RFC3339Nano),
+		},
 	}
 
 	r.Transactions = make([]transaction, 0, len(history))
@@ -153,7 +155,7 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 		})
 	}
 
-	return *r, nil
+	return r, nil
 }
 
 func txID(now time.Time) string {

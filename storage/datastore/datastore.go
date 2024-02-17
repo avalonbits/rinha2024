@@ -49,7 +49,6 @@ func GetReadDB(dbURL string) (*DB, error) {
 		return nil, err
 	}
 
-	db.SetMaxOpenConns(1)
 	return &DB{Queries: repo.New(db), rdbms: db}, nil
 }
 
@@ -67,18 +66,19 @@ func (db *DB) RDBMS() *sql.DB {
 }
 
 func (db *DB) Transaction(ctx context.Context, f func(*DB) error) error {
+	txdb := &DB{
+		rdbms: db.rdbms,
+	}
+
 	tx, err := db.rdbms.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("error creating transaction: %w", err)
 	}
+	txdb.Queries = db.Queries.WithTx(tx)
 
-	txdb := &DB{
-		rdbms:   db.rdbms,
-		Queries: db.Queries.WithTx(tx),
-	}
 	if err := f(txdb); err != nil {
-		err = fmt.Errorf("transaction error: %w", err)
 		rbErr := tx.Rollback()
+		err = fmt.Errorf("transaction error: %w", err)
 
 		if rbErr != nil {
 			err = errors.Join(err, rbErr)
