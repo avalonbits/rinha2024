@@ -15,12 +15,12 @@ import (
 )
 
 type Service struct {
-	db *datastore.DB
+	cidMap map[int64]*datastore.DB
 }
 
-func New(db *datastore.DB) *Service {
+func New(cidMap map[int64]*datastore.DB) *Service {
 	return &Service{
-		db: db,
+		cidMap: cidMap,
 	}
 }
 
@@ -38,6 +38,10 @@ type TransactResponse struct {
 func (s *Service) Transact(
 	ctx context.Context, cid, value int64, description string,
 ) (TransactResponse, error) {
+	db := s.cidMap[cid]
+	if db == nil {
+		return TransactResponse{}, NotFoundErr
+	}
 	r := &TransactResponse{
 		Limit:   0,
 		Balance: 0,
@@ -48,7 +52,7 @@ func (s *Service) Transact(
 	// it outside the transaction to reduce the time the transaction takes.
 	tid := txID(now)
 	var balance int64
-	return *r, s.db.Write(ctx, func(queries *repo.Queries) error {
+	return *r, db.Write(ctx, func(queries *repo.Queries) error {
 		row, err := queries.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -101,13 +105,17 @@ type AccountHistoryResponse struct {
 }
 
 func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistoryResponse, error) {
+	db := s.cidMap[cid]
+	if db == nil {
+		return AccountHistoryResponse{}, NotFoundErr
+	}
 	now := time.Now().UTC()
 
 	var history []repo.TransactionHistoryRow
 	var bal int64
 	var limit int64
 
-	err := s.db.Read(ctx, func(queries *repo.Queries) error {
+	err := db.Read(ctx, func(queries *repo.Queries) error {
 		row, err := queries.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

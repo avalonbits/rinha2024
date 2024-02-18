@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -30,13 +31,18 @@ var (
 
 func main() {
 	flag.Parse()
-	db, err := datastore.GetDB(os.Getenv("DATABASE"))
-	if err != nil {
-		log.Fatal(err)
+	dbName := os.Getenv("DATABASE")
+	cidMap := map[int64]*datastore.DB{}
+	for i := range 5 {
+		db, err := datastore.GetDB(fmt.Sprintf("%s-%d", dbName, i))
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer db.Close()
+		cidMap[int64(i)+1] = db
 	}
-	defer db.Close()
 
-	svc := rinha.New(db)
+	svc := rinha.New(cidMap)
 	handlers := api.New(svc)
 
 	// Echo instance
