@@ -1,7 +1,7 @@
 transact = function()
     headers = {}
     headers["Content-Type"] = "application/json"
-    id = math.random(1, 6)
+    id = math.random(1, 5)
     value = math.random(1, 10000)
     tp = "cd"
     tpidx = math.random(1,2)

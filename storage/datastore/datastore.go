@@ -6,6 +6,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/avalonbits/rinha2024/storage/datastore/repo"
 	"github.com/pressly/goose/v3"
@@ -53,6 +54,8 @@ func GetReadDB(dbURL string) (*DB, error) {
 }
 
 type DB struct {
+	mu sync.Mutex
+
 	*repo.Queries
 	rdbms *sql.DB
 }
@@ -69,6 +72,32 @@ func (db *DB) Transaction(ctx context.Context, f func(*DB) error) error {
 	txdb := &DB{
 		rdbms: db.rdbms,
 	}
+
+	tx, err := db.rdbms.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("error creating transaction: %w", err)
+	}
+	txdb.Queries = db.Queries.WithTx(tx)
+
+	if err := f(txdb); err != nil {
+		rbErr := tx.Rollback()
+		err = fmt.Errorf("transaction error: %w", err)
+
+		if rbErr != nil {
+			err = errors.Join(err, rbErr)
+		}
+		return err
+	}
+	return tx.Commit()
+}
+
+func (db *DB) WriteTransaction(ctx context.Context, f func(*DB) error) error {
+	txdb := &DB{
+		rdbms: db.rdbms,
+	}
+
+	db.mu.Lock()
+	defer db.mu.Unlock()
 
 	tx, err := db.rdbms.BeginTx(ctx, nil)
 	if err != nil {

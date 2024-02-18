@@ -50,7 +50,7 @@ func (s *Service) Transact(
 	// it outside the transaction to reduce the time the transaction takes.
 	tid := txID(now)
 	var balance int64
-	return *r, s.wrdb.Transaction(ctx, func(tx *datastore.DB) error {
+	return *r, s.wrdb.WriteTransaction(ctx, func(tx *datastore.DB) error {
 		row, err := tx.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
