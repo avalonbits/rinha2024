@@ -30,19 +30,13 @@ var (
 
 func main() {
 	flag.Parse()
-	rddb, err := datastore.GetReadDB(os.Getenv("RD_DATABASE_DSN"))
+	db, err := datastore.GetDB(os.Getenv("DATABASE"))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer rddb.Close()
+	defer db.Close()
 
-	wrdb, err := datastore.GetWriteDB(os.Getenv("WR_DATABASE_DSN"))
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer wrdb.Close()
-
-	svc := rinha.New(rddb, wrdb)
+	svc := rinha.New(db)
 	handlers := api.New(svc)
 
 	// Echo instance

@@ -15,14 +15,12 @@ import (
 )
 
 type Service struct {
-	rddb *datastore.DB
-	wrdb *datastore.DB
+	db *datastore.DB
 }
 
-func New(rddb *datastore.DB, wrdb *datastore.DB) *Service {
+func New(db *datastore.DB) *Service {
 	return &Service{
-		rddb: rddb,
-		wrdb: wrdb,
+		db: db,
 	}
 }
 
@@ -50,8 +48,8 @@ func (s *Service) Transact(
 	// it outside the transaction to reduce the time the transaction takes.
 	tid := txID(now)
 	var balance int64
-	return *r, s.wrdb.WriteTransaction(ctx, func(tx *datastore.DB) error {
-		row, err := tx.GetBalance(ctx, cid)
+	return *r, s.db.Write(ctx, func(queries *repo.Queries) error {
+		row, err := queries.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return NotFoundErr
@@ -64,7 +62,7 @@ func (s *Service) Transact(
 			return OverLimitErr
 		}
 
-		err = tx.CreateTransaction(ctx, repo.CreateTransactionParams{
+		err = queries.CreateTransaction(ctx, repo.CreateTransactionParams{
 			Cid:         cid,
 			Tid:         tid,
 			Value:       value,
@@ -109,8 +107,8 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 	var bal int64
 	var limit int64
 
-	err := s.rddb.Transaction(ctx, func(tx *datastore.DB) error {
-		row, err := tx.GetBalance(ctx, cid)
+	err := s.db.Read(ctx, func(queries *repo.Queries) error {
+		row, err := queries.GetBalance(ctx, cid)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return NotFoundErr
@@ -120,7 +118,7 @@ func (s *Service) AccountHistory(ctx context.Context, cid int64) (AccountHistory
 		bal = int64(row.Balance.Float64)
 		limit = row.Value
 
-		history, err = tx.TransactionHistory(ctx, cid)
+		history, err = queries.TransactionHistory(ctx, cid)
 		if err != nil {
 			return err
 		}
